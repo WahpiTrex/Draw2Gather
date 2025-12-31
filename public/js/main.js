@@ -137,21 +137,79 @@ function centerCanvas() {
 }
 
 function render() {
-    // Clear canvas with white
+    // Clear main canvas with white
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid
+    // Draw grid on main canvas
     drawGrid();
 
-    // Draw all strokes and fills
+    // Create or get offscreen canvas for drawings
+    if (!canvasState.drawingCanvas) {
+        canvasState.drawingCanvas = document.createElement('canvas');
+        canvasState.drawingCtx = canvasState.drawingCanvas.getContext('2d');
+    }
+
+    // Resize offscreen canvas if needed
+    if (canvasState.drawingCanvas.width !== canvas.width ||
+        canvasState.drawingCanvas.height !== canvas.height) {
+        canvasState.drawingCanvas.width = canvas.width;
+        canvasState.drawingCanvas.height = canvas.height;
+    }
+
+    // Clear offscreen canvas (transparent)
+    const drawCtx = canvasState.drawingCtx;
+    drawCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw all strokes on offscreen canvas
+    canvasState.drawings.forEach(item => {
+        if (item.tool === 'bucket') {
+            // Bucket fills are applied differently - on main canvas after composite
+            // For now, skip buckets in offscreen rendering
+        } else {
+            renderStrokeToContext(drawCtx, item);
+        }
+    });
+
+    // Composite offscreen canvas onto main canvas
+    ctx.drawImage(canvasState.drawingCanvas, 0, 0);
+
+    // Apply bucket fills after (they work on the final composite)
     canvasState.drawings.forEach(item => {
         if (item.tool === 'bucket') {
             applyBucketFill(item);
-        } else {
-            renderStroke(item);
         }
     });
+}
+
+function renderStrokeToContext(targetCtx, stroke) {
+    if (!stroke.points || stroke.points.length < 2) return;
+
+    targetCtx.save();
+
+    if (stroke.tool === 'eraser') {
+        targetCtx.globalCompositeOperation = 'destination-out';
+        targetCtx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+        targetCtx.globalCompositeOperation = 'source-over';
+        targetCtx.strokeStyle = stroke.color;
+    }
+
+    targetCtx.lineWidth = stroke.size * canvasState.scale;
+    targetCtx.lineCap = 'round';
+    targetCtx.lineJoin = 'round';
+
+    targetCtx.beginPath();
+    const firstPoint = worldToScreen(stroke.points[0].x, stroke.points[0].y);
+    targetCtx.moveTo(firstPoint.x, firstPoint.y);
+
+    for (let i = 1; i < stroke.points.length; i++) {
+        const point = worldToScreen(stroke.points[i].x, stroke.points[i].y);
+        targetCtx.lineTo(point.x, point.y);
+    }
+
+    targetCtx.stroke();
+    targetCtx.restore();
 }
 
 function drawGrid() {
@@ -299,33 +357,37 @@ function continueDrawing(worldX, worldY) {
 
     drawingState.currentStroke.points.push({ x: worldX, y: worldY });
 
-    const points = drawingState.currentStroke.points;
+    // For eraser, we need to re-render to properly show the erasing effect
+    // For pencil, we can draw incrementally for better performance
+    if (drawingState.currentTool === 'eraser') {
+        // Temporarily add current stroke to drawings for rendering
+        canvasState.drawings.push(drawingState.currentStroke);
+        render();
+        // Remove it (will be added permanently on endDrawing)
+        canvasState.drawings.pop();
+    } else {
+        // Draw incrementally for non-eraser tools
+        const points = drawingState.currentStroke.points;
 
-    if (points.length >= 2) {
-        const prevPoint = points[points.length - 2];
-        const currPoint = points[points.length - 1];
+        if (points.length >= 2) {
+            const prevPoint = points[points.length - 2];
+            const currPoint = points[points.length - 1];
 
-        const prevScreen = worldToScreen(prevPoint.x, prevPoint.y);
-        const currScreen = worldToScreen(currPoint.x, currPoint.y);
+            const prevScreen = worldToScreen(prevPoint.x, prevPoint.y);
+            const currScreen = worldToScreen(currPoint.x, currPoint.y);
 
-        ctx.save();
-
-        if (drawingState.currentTool === 'eraser') {
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.strokeStyle = 'rgba(0,0,0,1)';
-        } else {
+            ctx.save();
             ctx.globalCompositeOperation = 'source-over';
             ctx.strokeStyle = drawingState.currentColor;
+            ctx.lineWidth = drawingState.brushSize * canvasState.scale;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(prevScreen.x, prevScreen.y);
+            ctx.lineTo(currScreen.x, currScreen.y);
+            ctx.stroke();
+            ctx.restore();
         }
-
-        ctx.lineWidth = drawingState.brushSize * canvasState.scale;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(prevScreen.x, prevScreen.y);
-        ctx.lineTo(currScreen.x, currScreen.y);
-        ctx.stroke();
-        ctx.restore();
     }
 }
 
@@ -384,13 +446,31 @@ function hexToRgb(hex) {
     } : { r: 0, g: 0, b: 0 };
 }
 
-function colorsMatch(r1, g1, b1, r2, g2, b2, tolerance = 32) {
-    return Math.abs(r1 - r2) <= tolerance &&
-        Math.abs(g1 - g2) <= tolerance &&
-        Math.abs(b1 - b2) <= tolerance;
+function getPixelColor(pixels, x, y, width) {
+    const pos = (y * width + x) * 4;
+    return {
+        r: pixels[pos],
+        g: pixels[pos + 1],
+        b: pixels[pos + 2],
+        a: pixels[pos + 3]
+    };
 }
 
-function floodFill(startX, startY, fillColor) {
+function setPixelColor(pixels, x, y, width, color) {
+    const pos = (y * width + x) * 4;
+    pixels[pos] = color.r;
+    pixels[pos + 1] = color.g;
+    pixels[pos + 2] = color.b;
+    pixels[pos + 3] = 255;
+}
+
+function colorsMatch(c1, c2, tolerance = 48) {
+    return Math.abs(c1.r - c2.r) <= tolerance &&
+        Math.abs(c1.g - c2.g) <= tolerance &&
+        Math.abs(c1.b - c2.b) <= tolerance;
+}
+
+function floodFillScanline(startX, startY, fillColor) {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const pixels = imageData.data;
     const width = canvas.width;
@@ -401,80 +481,139 @@ function floodFill(startX, startY, fillColor) {
 
     if (startX < 0 || startX >= width || startY < 0 || startY >= height) return null;
 
-    const startPos = (startY * width + startX) * 4;
-    const startR = pixels[startPos];
-    const startG = pixels[startPos + 1];
-    const startB = pixels[startPos + 2];
-
+    const targetColor = getPixelColor(pixels, startX, startY, width);
     const fillRgb = hexToRgb(fillColor);
+    const newColor = { r: fillRgb.r, g: fillRgb.g, b: fillRgb.b };
 
-    // Don't fill if clicking on the same color
-    if (colorsMatch(startR, startG, startB, fillRgb.r, fillRgb.g, fillRgb.b, 10)) {
+    // Don't fill if already the same color
+    if (colorsMatch(targetColor, newColor, 10)) {
         return null;
     }
 
-    const pixelsToCheck = [[startX, startY]];
-    const visited = new Set();
-    const filledPixels = [];
-    const maxPixels = 500000; // Limit to prevent browser freeze
-    let pixelCount = 0;
+    const stack = [[startX, startY]];
+    const visited = new Uint8Array(width * height);
 
-    while (pixelsToCheck.length > 0 && pixelCount < maxPixels) {
-        const [x, y] = pixelsToCheck.pop();
-        const key = `${x},${y}`;
+    while (stack.length > 0) {
+        let [x, y] = stack.pop();
 
-        if (visited.has(key)) continue;
-        if (x < 0 || x >= width || y < 0 || y >= height) continue;
+        // Move to leftmost pixel
+        while (x > 0 && colorsMatch(getPixelColor(pixels, x - 1, y, width), targetColor) && !visited[(y * width) + x - 1]) {
+            x--;
+        }
 
-        const pos = (y * width + x) * 4;
-        const r = pixels[pos];
-        const g = pixels[pos + 1];
-        const b = pixels[pos + 2];
+        let spanAbove = false;
+        let spanBelow = false;
 
-        if (!colorsMatch(r, g, b, startR, startG, startB)) continue;
+        while (x < width && colorsMatch(getPixelColor(pixels, x, y, width), targetColor) && !visited[(y * width) + x]) {
+            visited[(y * width) + x] = 1;
+            setPixelColor(pixels, x, y, width, newColor);
 
-        visited.add(key);
-        pixelCount++;
+            // Check above
+            if (y > 0) {
+                const aboveIdx = ((y - 1) * width) + x;
+                if (!spanAbove && !visited[aboveIdx] && colorsMatch(getPixelColor(pixels, x, y - 1, width), targetColor)) {
+                    stack.push([x, y - 1]);
+                    spanAbove = true;
+                } else if (spanAbove && (visited[aboveIdx] || !colorsMatch(getPixelColor(pixels, x, y - 1, width), targetColor))) {
+                    spanAbove = false;
+                }
+            }
 
-        // Fill pixel
-        pixels[pos] = fillRgb.r;
-        pixels[pos + 1] = fillRgb.g;
-        pixels[pos + 2] = fillRgb.b;
-        pixels[pos + 3] = 255;
+            // Check below
+            if (y < height - 1) {
+                const belowIdx = ((y + 1) * width) + x;
+                if (!spanBelow && !visited[belowIdx] && colorsMatch(getPixelColor(pixels, x, y + 1, width), targetColor)) {
+                    stack.push([x, y + 1]);
+                    spanBelow = true;
+                } else if (spanBelow && (visited[belowIdx] || !colorsMatch(getPixelColor(pixels, x, y + 1, width), targetColor))) {
+                    spanBelow = false;
+                }
+            }
 
-        filledPixels.push({ x, y });
-
-        // Add neighbors
-        pixelsToCheck.push([x + 1, y]);
-        pixelsToCheck.push([x - 1, y]);
-        pixelsToCheck.push([x, y + 1]);
-        pixelsToCheck.push([x, y - 1]);
+            x++;
+        }
     }
 
     ctx.putImageData(imageData, 0, 0);
 
-    // Return fill data for syncing
+    // Convert screen position to world position for storage
+    const worldPos = screenToWorld(startX, startY);
+
     return {
         tool: 'bucket',
         color: fillColor,
-        screenX: startX,
-        screenY: startY,
-        canvasWidth: width,
-        canvasHeight: height,
-        offsetX: canvasState.offsetX,
-        offsetY: canvasState.offsetY,
-        scale: canvasState.scale
+        worldX: worldPos.x,
+        worldY: worldPos.y
     };
 }
 
 function applyBucketFill(fillData) {
-    // Recalculate the screen position based on current view
-    // This is a simplified approach - bucket fills are view-dependent
-    const worldX = (fillData.screenX - fillData.offsetX) / fillData.scale;
-    const worldY = (fillData.screenY - fillData.offsetY) / fillData.scale;
-    const screenPos = worldToScreen(worldX, worldY);
+    // Convert world position back to screen position
+    const screenPos = worldToScreen(fillData.worldX, fillData.worldY);
+    const screenX = Math.floor(screenPos.x);
+    const screenY = Math.floor(screenPos.y);
 
-    floodFill(screenPos.x, screenPos.y, fillData.color);
+    if (screenX < 0 || screenX >= canvas.width || screenY < 0 || screenY >= canvas.height) {
+        return; // Out of visible area
+    }
+
+    // Apply fill at screen position (simplified - just fills at current view)
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    const width = canvas.width;
+    const height = canvas.height;
+
+    const targetColor = getPixelColor(pixels, screenX, screenY, width);
+    const fillRgb = hexToRgb(fillData.color);
+    const newColor = { r: fillRgb.r, g: fillRgb.g, b: fillRgb.b };
+
+    // Don't refill if already correct color
+    if (colorsMatch(targetColor, newColor, 10)) {
+        return;
+    }
+
+    const stack = [[screenX, screenY]];
+    const visited = new Uint8Array(width * height);
+
+    while (stack.length > 0) {
+        let [x, y] = stack.pop();
+
+        while (x > 0 && colorsMatch(getPixelColor(pixels, x - 1, y, width), targetColor) && !visited[(y * width) + x - 1]) {
+            x--;
+        }
+
+        let spanAbove = false;
+        let spanBelow = false;
+
+        while (x < width && colorsMatch(getPixelColor(pixels, x, y, width), targetColor) && !visited[(y * width) + x]) {
+            visited[(y * width) + x] = 1;
+            setPixelColor(pixels, x, y, width, newColor);
+
+            if (y > 0) {
+                const aboveIdx = ((y - 1) * width) + x;
+                if (!spanAbove && !visited[aboveIdx] && colorsMatch(getPixelColor(pixels, x, y - 1, width), targetColor)) {
+                    stack.push([x, y - 1]);
+                    spanAbove = true;
+                } else if (spanAbove && (visited[aboveIdx] || !colorsMatch(getPixelColor(pixels, x, y - 1, width), targetColor))) {
+                    spanAbove = false;
+                }
+            }
+
+            if (y < height - 1) {
+                const belowIdx = ((y + 1) * width) + x;
+                if (!spanBelow && !visited[belowIdx] && colorsMatch(getPixelColor(pixels, x, y + 1, width), targetColor)) {
+                    stack.push([x, y + 1]);
+                    spanBelow = true;
+                } else if (spanBelow && (visited[belowIdx] || !colorsMatch(getPixelColor(pixels, x, y + 1, width), targetColor))) {
+                    spanBelow = false;
+                }
+            }
+
+            x++;
+        }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
 }
 
 function clearLocalCanvas() {
@@ -664,7 +803,7 @@ function handleMouseDown(e) {
     if (e.button === 0) {
         // Bucket tool - single click to fill
         if (drawingState.currentTool === 'bucket') {
-            const fillData = floodFill(mouseX, mouseY, drawingState.currentColor);
+            const fillData = floodFillScanline(mouseX, mouseY, drawingState.currentColor);
             if (fillData) {
                 canvasState.drawings.push(fillData);
                 socket.emit('draw', fillData);
