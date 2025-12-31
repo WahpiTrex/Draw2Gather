@@ -9,26 +9,26 @@
     --accent-coral: #FC5C65;
     --accent-amber: #FED330;
     --accent-peach: #FFBE76;
-    
+
     /* Notebook/Paper Colors */
     --paper: #FFF9F0;
     --paper-lines: #E8DDD4;
     --paper-dark: #F5EDE4;
-    
+
     /* Text Colors */
     --text-dark: #2D3436;
     --text-medium: #636E72;
     --text-light: #B2BEC3;
-    
+
     /* UI Colors */
     --border: #DDD0C4;
     --shadow: rgba(45, 52, 54, 0.1);
     --shadow-strong: rgba(45, 52, 54, 0.2);
-    
+
     /* Fonts */
     --font-handwritten: 'Caveat', cursive;
     --font-friendly: 'Nunito', sans-serif;
-    
+
     /* Sizes */
     --radius-sm: 8px;
     --radius-md: 16px;
@@ -43,7 +43,8 @@
     box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
     height: 100%;
     overflow: hidden;
 }
@@ -63,14 +64,12 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: 
-        repeating-linear-gradient(
-            0deg,
+    background-image:
+        repeating-linear-gradient(0deg,
             transparent,
             transparent 28px,
             var(--paper-lines) 28px,
-            var(--paper-lines) 29px
-        );
+            var(--paper-lines) 29px);
     opacity: 0.3;
     pointer-events: none;
     z-index: -1;
@@ -137,7 +136,7 @@ body::before {
     border-radius: var(--radius-xl);
     padding: 32px;
     position: relative;
-    box-shadow: 
+    box-shadow:
         8px 8px 0 var(--paper-lines),
         12px 12px 20px var(--shadow);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -145,7 +144,7 @@ body::before {
 
 .room-card:hover {
     transform: translateY(-4px);
-    box-shadow: 
+    box-shadow:
         12px 12px 0 var(--paper-lines),
         16px 16px 24px var(--shadow);
 }
@@ -157,10 +156,29 @@ body::before {
     animation: float 3s ease-in-out infinite;
 }
 
-.card-doodle.top-left { top: -12px; left: -12px; animation-delay: 0s; }
-.card-doodle.top-right { top: -12px; right: -12px; animation-delay: 0.5s; }
-.card-doodle.bottom-left { bottom: -12px; left: -12px; animation-delay: 1s; }
-.card-doodle.bottom-right { bottom: -12px; right: -12px; animation-delay: 1.5s; }
+.card-doodle.top-left {
+    top: -12px;
+    left: -12px;
+    animation-delay: 0s;
+}
+
+.card-doodle.top-right {
+    top: -12px;
+    right: -12px;
+    animation-delay: 0.5s;
+}
+
+.card-doodle.bottom-left {
+    bottom: -12px;
+    left: -12px;
+    animation-delay: 1s;
+}
+
+.card-doodle.bottom-right {
+    bottom: -12px;
+    right: -12px;
+    animation-delay: 1.5s;
+}
 
 /* Input Group */
 .input-group {
@@ -198,7 +216,8 @@ body::before {
 }
 
 /* Buttons */
-.primary-btn, .secondary-btn {
+.primary-btn,
+.secondary-btn {
     width: 100%;
     padding: 16px 24px;
     border: 3px solid transparent;
@@ -444,7 +463,7 @@ body::before {
     border-radius: 50% 50% 50% 0;
     transform: rotate(-45deg);
     border: 2px solid white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .cursor-name {
@@ -457,7 +476,7 @@ body::before {
     font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     border: 2px solid;
 }
 
@@ -753,9 +772,11 @@ body::before {
         opacity: 0;
         transform: scale(0.5) translateY(-50px);
     }
+
     60% {
         transform: scale(1.1) translateY(0);
     }
+
     100% {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -763,27 +784,36 @@ body::before {
 }
 
 @keyframes wiggle {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: rotate(-5deg);
     }
+
     50% {
         transform: rotate(5deg);
     }
 }
 
 @keyframes float {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(0);
     }
+
     50% {
         transform: translateY(-8px);
     }
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
     }
+
     50% {
         transform: scale(1.05);
     }
@@ -794,6 +824,7 @@ body::before {
         opacity: 0;
         transform: translateX(20px);
     }
+
     to {
         opacity: 1;
         transform: translateX(0);
@@ -824,36 +855,36 @@ body::before {
     .logo-icon {
         font-size: 56px;
     }
-    
+
     .logo-text {
         font-size: 40px;
     }
-    
+
     .room-card {
         padding: 24px;
     }
-    
+
     .toolbar {
         gap: 8px;
         padding: 10px;
     }
-    
+
     .tool-group {
         padding: 6px 8px;
     }
-    
+
     .quick-colors {
         display: none;
     }
-    
+
     .users-panel {
         width: 180px;
     }
-    
+
     .mini-map {
         display: none;
     }
-    
+
     .zoom-controls {
         bottom: 80px;
     }
@@ -863,8 +894,200 @@ body::before {
     .room-info span:not(.room-icon) {
         display: none;
     }
-    
+
     .tool-group.size {
         min-width: 120px;
     }
+}
+
+/* ===== Header Right Section ===== */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ===== My Cursor (Own Cursor Indicator) ===== */
+.my-cursor {
+    position: absolute;
+    pointer-events: none;
+    z-index: 15;
+    display: none;
+}
+
+.my-cursor-dot {
+    width: 12px;
+    height: 12px;
+    background: #2D3436;
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transform: translate(-50%, -50%);
+}
+
+/* Dark mode cursor - white */
+body.dark-mode .my-cursor-dot {
+    background: white;
+    border-color: #2D3436;
+}
+
+/* ===== Dark Mode ===== */
+body.dark-mode {
+    --paper: #1a1a2e;
+    --paper-lines: #252542;
+    --paper-dark: #16162a;
+    --text-dark: #EAEAEA;
+    --text-medium: #B0B0B0;
+    --text-light: #666;
+    --border: #3a3a5c;
+    --shadow: rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode::before {
+    opacity: 0.1;
+}
+
+body.dark-mode #lobby-screen {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
+}
+
+body.dark-mode .room-card {
+    background: #252542;
+    border-color: #3a3a5c;
+    box-shadow:
+        8px 8px 0 #16162a,
+        12px 12px 20px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .input-group input {
+    background: #1a1a2e;
+    color: #EAEAEA;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .input-group input:focus {
+    background: #252542;
+}
+
+body.dark-mode .active-rooms {
+    background: #252542;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .room-item {
+    background: #1a1a2e;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .room-item:hover {
+    background: #252542;
+}
+
+body.dark-mode #drawing-screen {
+    background: #1a1a2e;
+}
+
+body.dark-mode .drawing-header {
+    background: #252542;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .icon-btn {
+    background: #1a1a2e;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .icon-btn:hover {
+    background: #3a3a5c;
+}
+
+body.dark-mode .toolbar {
+    background: #252542;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .tool-group {
+    background: #1a1a2e;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .tool-btn:hover {
+    background: #3a3a5c;
+}
+
+body.dark-mode .users-panel {
+    background: #252542;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .panel-header {
+    background: #1a1a2e;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .panel-toggle {
+    background: #252542;
+    border-color: #3a3a5c;
+    color: #B0B0B0;
+}
+
+body.dark-mode .user-item:hover {
+    background: #1a1a2e;
+}
+
+body.dark-mode .zoom-controls {
+    background: #252542;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .zoom-btn {
+    background: #1a1a2e;
+    border-color: #3a3a5c;
+    color: #EAEAEA;
+}
+
+body.dark-mode .zoom-btn:hover {
+    background: var(--primary);
+    color: white;
+}
+
+body.dark-mode .mini-map {
+    background: #252542;
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .cursor-name {
+    background: #252542;
+    color: #EAEAEA;
+}
+
+body.dark-mode .color-preview {
+    border-color: #3a3a5c;
+}
+
+body.dark-mode .color-btn {
+    border-color: #3a3a5c;
+}
+
+body.dark-mode #brush-size {
+    background: #3a3a5c;
+}
+
+body.dark-mode ::-webkit-scrollbar-track {
+    background: #1a1a2e;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #3a3a5c;
+}
+
+body.dark-mode .secondary-btn {
+    background: #252542;
+    color: #EAEAEA;
+    border-color: #3a3a5c;
+    box-shadow: 0 4px 0 #1a1a2e;
+}
+
+body.dark-mode .no-rooms {
+    color: #666;
 }

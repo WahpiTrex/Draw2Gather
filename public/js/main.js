@@ -144,9 +144,13 @@ function render() {
     // Draw grid
     drawGrid();
 
-    // Draw all strokes
-    canvasState.drawings.forEach(stroke => {
-        renderStroke(stroke);
+    // Draw all strokes and fills
+    canvasState.drawings.forEach(item => {
+        if (item.tool === 'bucket') {
+            applyBucketFill(item);
+        } else {
+            renderStroke(item);
+        }
     });
 }
 
@@ -347,7 +351,13 @@ function setTool(tool) {
         btn.classList.toggle('active', btn.dataset.tool === tool);
     });
 
-    canvasContainer.style.cursor = tool === 'eraser' ? 'cell' : 'crosshair';
+    if (tool === 'eraser') {
+        canvasContainer.style.cursor = 'cell';
+    } else if (tool === 'bucket') {
+        canvasContainer.style.cursor = 'cell';
+    } else {
+        canvasContainer.style.cursor = 'crosshair';
+    }
 }
 
 function setColor(color) {
@@ -359,6 +369,112 @@ function setColor(color) {
 function setBrushSize(size) {
     drawingState.brushSize = parseInt(size);
     sizeValue.textContent = size;
+}
+
+// ============================================
+// BUCKET FILL FUNCTIONS
+// ============================================
+
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
+}
+
+function colorsMatch(r1, g1, b1, r2, g2, b2, tolerance = 32) {
+    return Math.abs(r1 - r2) <= tolerance &&
+        Math.abs(g1 - g2) <= tolerance &&
+        Math.abs(b1 - b2) <= tolerance;
+}
+
+function floodFill(startX, startY, fillColor) {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    const width = canvas.width;
+    const height = canvas.height;
+
+    startX = Math.floor(startX);
+    startY = Math.floor(startY);
+
+    if (startX < 0 || startX >= width || startY < 0 || startY >= height) return null;
+
+    const startPos = (startY * width + startX) * 4;
+    const startR = pixels[startPos];
+    const startG = pixels[startPos + 1];
+    const startB = pixels[startPos + 2];
+
+    const fillRgb = hexToRgb(fillColor);
+
+    // Don't fill if clicking on the same color
+    if (colorsMatch(startR, startG, startB, fillRgb.r, fillRgb.g, fillRgb.b, 10)) {
+        return null;
+    }
+
+    const pixelsToCheck = [[startX, startY]];
+    const visited = new Set();
+    const filledPixels = [];
+    const maxPixels = 500000; // Limit to prevent browser freeze
+    let pixelCount = 0;
+
+    while (pixelsToCheck.length > 0 && pixelCount < maxPixels) {
+        const [x, y] = pixelsToCheck.pop();
+        const key = `${x},${y}`;
+
+        if (visited.has(key)) continue;
+        if (x < 0 || x >= width || y < 0 || y >= height) continue;
+
+        const pos = (y * width + x) * 4;
+        const r = pixels[pos];
+        const g = pixels[pos + 1];
+        const b = pixels[pos + 2];
+
+        if (!colorsMatch(r, g, b, startR, startG, startB)) continue;
+
+        visited.add(key);
+        pixelCount++;
+
+        // Fill pixel
+        pixels[pos] = fillRgb.r;
+        pixels[pos + 1] = fillRgb.g;
+        pixels[pos + 2] = fillRgb.b;
+        pixels[pos + 3] = 255;
+
+        filledPixels.push({ x, y });
+
+        // Add neighbors
+        pixelsToCheck.push([x + 1, y]);
+        pixelsToCheck.push([x - 1, y]);
+        pixelsToCheck.push([x, y + 1]);
+        pixelsToCheck.push([x, y - 1]);
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+
+    // Return fill data for syncing
+    return {
+        tool: 'bucket',
+        color: fillColor,
+        screenX: startX,
+        screenY: startY,
+        canvasWidth: width,
+        canvasHeight: height,
+        offsetX: canvasState.offsetX,
+        offsetY: canvasState.offsetY,
+        scale: canvasState.scale
+    };
+}
+
+function applyBucketFill(fillData) {
+    // Recalculate the screen position based on current view
+    // This is a simplified approach - bucket fills are view-dependent
+    const worldX = (fillData.screenX - fillData.offsetX) / fillData.scale;
+    const worldY = (fillData.screenY - fillData.offsetY) / fillData.scale;
+    const screenPos = worldToScreen(worldX, worldY);
+
+    floodFill(screenPos.x, screenPos.y, fillData.color);
 }
 
 function clearLocalCanvas() {
@@ -544,8 +660,21 @@ function handleMouseDown(e) {
         return;
     }
 
-    // Left click for drawing
+    // Left click
     if (e.button === 0) {
+        // Bucket tool - single click to fill
+        if (drawingState.currentTool === 'bucket') {
+            const fillData = floodFill(mouseX, mouseY, drawingState.currentColor);
+            if (fillData) {
+                canvasState.drawings.push(fillData);
+                socket.emit('draw', fillData);
+                updateMiniMap();
+                console.log('Bucket fill applied');
+            }
+            return;
+        }
+
+        // Other tools - start drawing
         const worldPos = screenToWorld(mouseX, mouseY);
         startDrawing(worldPos.x, worldPos.y);
     }
@@ -811,4 +940,57 @@ shakeStyle.textContent = `
 `;
 document.head.appendChild(shakeStyle);
 
+// ============================================
+// DARK MODE
+// ============================================
+
+const darkModeBtn = document.getElementById('dark-mode-btn');
+const darkModeIcon = document.getElementById('dark-mode-icon');
+let isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+function toggleDarkMode() {
+    isDarkMode = !isDarkMode;
+    document.body.classList.toggle('dark-mode', isDarkMode);
+    darkModeIcon.textContent = isDarkMode ? '☀️' : '🌙';
+    localStorage.setItem('darkMode', isDarkMode);
+}
+
+// Initialize dark mode from localStorage
+if (isDarkMode) {
+    document.body.classList.add('dark-mode');
+    darkModeIcon.textContent = '☀️';
+}
+
+darkModeBtn.addEventListener('click', toggleDarkMode);
+
+// ============================================
+// OWN CURSOR TRACKING
+// ============================================
+
+const myCursor = document.getElementById('my-cursor');
+
+function updateMyCursor(e) {
+    if (!myCursor || !drawingScreen.classList.contains('active')) return;
+
+    const rect = canvasContainer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Show cursor only when inside canvas
+    if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+        myCursor.style.display = 'block';
+        myCursor.style.left = `${x}px`;
+        myCursor.style.top = `${y}px`;
+    } else {
+        myCursor.style.display = 'none';
+    }
+}
+
+// Track cursor movement globally
+document.addEventListener('mousemove', updateMyCursor);
+
+// Hide default cursor on canvas container
+canvasContainer.style.cursor = 'none';
+
 console.log('🎨 Draw2Gather loaded! Ready to create art together!');
+

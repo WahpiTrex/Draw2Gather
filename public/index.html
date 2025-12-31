@@ -76,9 +76,14 @@
                 <span class="room-icon">🎨</span>
                 <span id="current-room-name">Oda Adı</span>
             </div>
-            <div class="users-indicator" id="users-indicator">
-                <span class="users-icon">👥</span>
-                <span id="user-count">1</span>
+            <div class="header-right">
+                <button id="dark-mode-btn" class="icon-btn" title="Karanlık Mod">
+                    <span id="dark-mode-icon">🌙</span>
+                </button>
+                <div class="users-indicator" id="users-indicator">
+                    <span class="users-icon">👥</span>
+                    <span id="user-count">1</span>
+                </div>
             </div>
         </header>
 
@@ -86,6 +91,9 @@
         <div id="canvas-container">
             <canvas id="drawing-canvas"></canvas>
             <div id="cursors-layer"></div>
+            <div id="my-cursor" class="my-cursor">
+                <div class="my-cursor-dot"></div>
+            </div>
         </div>
 
         <!-- Toolbar -->
@@ -96,6 +104,9 @@
                 </button>
                 <button class="tool-btn" data-tool="eraser" title="Silgi">
                     <span>🧹</span>
+                </button>
+                <button class="tool-btn" data-tool="bucket" title="Boya Kovası">
+                    <span>🪣</span>
                 </button>
             </div>
 
