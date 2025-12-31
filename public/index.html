@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw2Gather - Birlikte Çizelim! 🎨</title>
+    <meta name="description"
+        content="Arkadaşlarınla gerçek zamanlı çizim yap! Sonsuz canvas, oda sistemi ve eğlenceli araçlar.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Landing / Room Selection Screen -->
+    <div id="lobby-screen" class="screen active">
+        <div class="lobby-container">
+            <div class="logo-section">
+                <div class="logo-icon">🎨</div>
+                <h1 class="logo-text">Draw2Gather</h1>
+                <p class="tagline">Birlikte çizmek daha eğlenceli! ✨</p>
+            </div>
+
+            <div class="room-card">
+                <div class="card-doodle top-left">✏️</div>
+                <div class="card-doodle top-right">🖌️</div>
+                <div class="card-doodle bottom-left">🌈</div>
+                <div class="card-doodle bottom-right">⭐</div>
+
+                <div class="input-group">
+                    <label for="username-input">Senin adın ne? 👋</label>
+                    <input type="text" id="username-input" placeholder="Yaratıcı Ressam" maxlength="20">
+                </div>
+
+                <div class="input-group">
+                    <label for="room-input">Oda adı</label>
+                    <input type="text" id="room-input" placeholder="super-cizim-odasi" maxlength="30">
+                </div>
+
+                <button id="join-btn" class="primary-btn">
+                    <span class="btn-icon">🚀</span>
+                    <span>Odaya Katıl!</span>
+                </button>
+
+                <div class="divider">
+                    <span>veya</span>
+                </div>
+
+                <button id="create-random-btn" class="secondary-btn">
+                    <span class="btn-icon">🎲</span>
+                    <span>Rastgele Oda Oluştur</span>
+                </button>
+            </div>
+
+            <div class="active-rooms" id="active-rooms">
+                <h3>🔥 Aktif Odalar</h3>
+                <div class="rooms-list" id="rooms-list">
+                    <!-- Room items will be added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawing Screen -->
+    <div id="drawing-screen" class="screen">
+        <!-- Header -->
+        <header class="drawing-header">
+            <button id="back-btn" class="icon-btn" title="Lobiye Dön">
+                <span>🏠</span>
+            </button>
+            <div class="room-info">
+                <span class="room-icon">🎨</span>
+                <span id="current-room-name">Oda Adı</span>
+            </div>
+            <div class="users-indicator" id="users-indicator">
+                <span class="users-icon">👥</span>
+                <span id="user-count">1</span>
+            </div>
+        </header>
+
+        <!-- Canvas Container -->
+        <div id="canvas-container">
+            <canvas id="drawing-canvas"></canvas>
+            <div id="cursors-layer"></div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="tool-group">
+                <button class="tool-btn active" data-tool="pencil" title="Kalem">
+                    <span>✏️</span>
+                </button>
+                <button class="tool-btn" data-tool="eraser" title="Silgi">
+                    <span>🧹</span>
+                </button>
+            </div>
+
+            <div class="tool-group colors">
+                <div class="color-picker-wrapper">
+                    <input type="color" id="color-picker" value="#FF6B6B">
+                    <div class="color-preview" id="color-preview"></div>
+                </div>
+                <div class="quick-colors">
+                    <button class="color-btn" data-color="#2C3E50" style="background: #2C3E50"></button>
+                    <button class="color-btn" data-color="#E74C3C" style="background: #E74C3C"></button>
+                    <button class="color-btn" data-color="#F39C12" style="background: #F39C12"></button>
+                    <button class="color-btn" data-color="#27AE60" style="background: #27AE60"></button>
+                    <button class="color-btn" data-color="#3498DB" style="background: #3498DB"></button>
+                    <button class="color-btn" data-color="#9B59B6" style="background: #9B59B6"></button>
+                </div>
+            </div>
+
+            <div class="tool-group size">
+                <label class="size-label">📏</label>
+                <input type="range" id="brush-size" min="2" max="50" value="5">
+                <span id="size-value">5</span>
+            </div>
+
+            <div class="tool-group actions">
+                <button class="tool-btn" id="clear-btn" title="Temizle">
+                    <span>🗑️</span>
+                </button>
+                <button class="tool-btn" id="center-btn" title="Merkeze Dön">
+                    <span>🎯</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Users Panel -->
+        <div class="users-panel" id="users-panel">
+            <div class="panel-header">
+                <span>👥 Çizerler</span>
+                <button class="panel-toggle" id="toggle-users">−</button>
+            </div>
+            <div class="users-list" id="users-list">
+                <!-- User items will be added here -->
+            </div>
+        </div>
+
+        <!-- Zoom Controls -->
+        <div class="zoom-controls">
+            <button class="zoom-btn" id="zoom-in">+</button>
+            <span class="zoom-level" id="zoom-level">100%</span>
+            <button class="zoom-btn" id="zoom-out">−</button>
+        </div>
+
+        <!-- Mini Map -->
+        <div class="mini-map" id="mini-map">
+            <canvas id="mini-map-canvas"></canvas>
+            <div class="viewport-indicator" id="viewport-indicator"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>

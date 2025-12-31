@@ -1,0 +1,17 @@
+{
+  "name": "draw2gather",
+  "version": "1.0.0",
+  "description": "Real-time collaborative drawing application with room system and infinite canvas",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["drawing", "collaborative", "realtime", "canvas", "socket.io"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}
