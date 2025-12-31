@@ -185,12 +185,21 @@ function drawGrid() {
 function renderStroke(stroke) {
     if (!stroke.points || stroke.points.length < 2) return;
 
-    ctx.beginPath();
-    ctx.strokeStyle = stroke.tool === 'eraser' ? '#FFFFFF' : stroke.color;
+    ctx.save();
+
+    if (stroke.tool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = stroke.color;
+    }
+
     ctx.lineWidth = stroke.size * canvasState.scale;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
+    ctx.beginPath();
     const firstPoint = worldToScreen(stroke.points[0].x, stroke.points[0].y);
     ctx.moveTo(firstPoint.x, firstPoint.y);
 
@@ -200,6 +209,7 @@ function renderStroke(stroke) {
     }
 
     ctx.stroke();
+    ctx.restore();
 }
 
 function updateMiniMap() {
@@ -294,14 +304,24 @@ function continueDrawing(worldX, worldY) {
         const prevScreen = worldToScreen(prevPoint.x, prevPoint.y);
         const currScreen = worldToScreen(currPoint.x, currPoint.y);
 
-        ctx.beginPath();
-        ctx.strokeStyle = drawingState.currentTool === 'eraser' ? '#FFFFFF' : drawingState.currentColor;
+        ctx.save();
+
+        if (drawingState.currentTool === 'eraser') {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
+        } else {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = drawingState.currentColor;
+        }
+
         ctx.lineWidth = drawingState.brushSize * canvasState.scale;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+        ctx.beginPath();
         ctx.moveTo(prevScreen.x, prevScreen.y);
         ctx.lineTo(currScreen.x, currScreen.y);
         ctx.stroke();
+        ctx.restore();
     }
 }
 
